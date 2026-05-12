@@ -192,7 +192,13 @@ button:hover{transform:translateY(-1px);background:var(--sci-leaf);border-color:
   </div>
   <div class="row2" style="margin-bottom:10px">
     <div class="field"><label>Cash crop / land use</label><select id="crop-sel" onchange="compute()"></select></div>
-    <div class="field"><label>Tillage system</label><select id="till-sel" onchange="compute()"></select></div>
+    <div class="field">
+      <label>Tillage systems / field operations</label>
+      <input class="prac-search" type="text" id="till-search" placeholder="Search tillage operations (e.g. no-till, disk, chisel)…" oninput="filterTillages()">
+      <div class="prac-list" id="till-list"></div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:10px">Selected tillage operations:</div>
+      <div class="prac-tags" id="till-tags"><span style="font-size:12px;color:var(--color-text-tertiary)">None selected</span></div>
+    </div>
   </div>
   <div class="field">
     <label>Cover crops (NRCS Practice 340)</label>
@@ -201,8 +207,8 @@ button:hover{transform:translateY(-1px);background:var(--sci-leaf);border-color:
     <div style="font-size:12px;color:var(--color-text-secondary);margin-top:10px">Selected cover crops:</div>
     <div class="prac-tags" id="cc-tags"><span style="font-size:12px;color:var(--color-text-tertiary)">None selected</span></div>
   </div>
-  <div class="note">Select multiple cover crop species or mixes. Selected cover crop multipliers combine to estimate the C-factor reduction.</div>
-  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px">Combined cover crop multiplier: <strong id="cc-out" style="color:var(--color-text-primary)">1.000</strong> &nbsp; Effective C factor: <strong id="c-out" style="color:var(--color-text-primary)">—</strong></div>
+  <div class="note">Select multiple tillage operations and cover crop species or mixes. For tillage, the highest-disturbance selected operation is used so stacked operations do not incorrectly reduce erosion risk.</div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px">Combined tillage multiplier: <strong id="till-out" style="color:var(--color-text-primary)">1.000</strong> &nbsp; Combined cover crop multiplier: <strong id="cc-out" style="color:var(--color-text-primary)">1.000</strong> &nbsp; Effective C factor: <strong id="c-out" style="color:var(--color-text-primary)">—</strong></div>
 </div>
 
 <div class="slbl">Step 5 — Conservation practices (P factor)</div>
@@ -246,6 +252,7 @@ let unit='us';
 let state={r:162,k:0.30,ls:1.8,c:0.25,p:1.0,lft:200,spct:6,lfactor:1,sfactor:1.8,mexp:0.5,texName:'Loam'};
 let selectedPracs=new Map();
 let selectedCoverCrops=new Map();
+let selectedTillages=new Map();
 
 const CROPS=[
   {g:'Corn & grain crops',items:[
@@ -513,12 +520,81 @@ function buildDropdowns(){
     g.items.forEach(c=>{const o=document.createElement('option');o.value=c.b;o.textContent=c.n;og.appendChild(o);});
     cs.appendChild(og);
   });
-  const ts=document.getElementById('till-sel');
-  TILLAGE.forEach(t=>{const o=document.createElement('option');o.value=t.m;o.textContent=t.n;ts.appendChild(o);});
+  if(selectedTillages.size===0){
+    const defaultTill=TILLAGE.find(t=>t.n==='No-till')||TILLAGE[0];
+    selectedTillages.set(tillageKey(defaultTill),defaultTill);
+  }
+  renderTillageList('');
+  renderTillageTags();
   renderCoverCropList('');
   renderPracList('');
 }
 
+
+
+function tillageKey(item){
+  return String(item.n).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+function renderTillageList(q){
+  const el=document.getElementById('till-list');
+  if(!el) return;
+  el.innerHTML='';
+  const qlow=String(q||'').toLowerCase();
+  TILLAGE.forEach(item=>{
+    if(q && !item.n.toLowerCase().includes(qlow)) return;
+    const key=tillageKey(item);
+    const div=document.createElement('label');
+    div.className='prac-item'+(selectedTillages.has(key)?' checked':'');
+    div.innerHTML=`<input type="checkbox" id="till-${key}" ${selectedTillages.has(key)?'checked':''}><span class="prac-code">C×</span><span style="flex:1">${item.n}</span><span style="font-size:11px;color:var(--color-text-tertiary)">${item.m.toFixed(2)}</span>`;
+    div.onclick=(e)=>{
+      e.preventDefault();
+      toggleTillage(item);
+    };
+    el.appendChild(div);
+  });
+  if(el.children.length===0){el.innerHTML='<div style="padding:10px;font-size:12px;color:var(--color-text-tertiary)">No tillage operations match your search.</div>';}
+}
+
+function toggleTillage(item){
+  const key=tillageKey(item);
+  if(selectedTillages.has(key)){
+    selectedTillages.delete(key);
+  } else {
+    selectedTillages.set(key,item);
+  }
+  renderTillageList(document.getElementById('till-search').value);
+  renderTillageTags();
+  compute();
+}
+
+function renderTillageTags(){
+  const el=document.getElementById('till-tags');
+  if(!el) return;
+  if(selectedTillages.size===0){el.innerHTML='<span style="font-size:12px;color:var(--color-text-tertiary)">None selected</span>';return;}
+  el.innerHTML='';
+  selectedTillages.forEach((item,key)=>{
+    const t=document.createElement('div');t.className='ptag';
+    t.innerHTML=`<span>${item.n.length>32?item.n.slice(0,32)+'…':item.n}</span><button onclick="removeTillage('${key}')" aria-label="Remove ${item.n}">×</button>`;
+    el.appendChild(t);
+  });
+}
+
+function removeTillage(key){
+  selectedTillages.delete(key);
+  renderTillageList(document.getElementById('till-search').value);
+  renderTillageTags();
+  compute();
+}
+
+function filterTillages(){renderTillageList(document.getElementById('till-search').value);}
+
+function getCombinedTillageMultiplier(){
+  if(selectedTillages.size===0) return 1.0;
+  let combined=0;
+  selectedTillages.forEach(item=>{combined=Math.max(combined,Number(item.m)||1.0);});
+  return combined || 1.0;
+}
 
 function coverCropKey(item){
   return String(item.n).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
@@ -742,7 +818,7 @@ function setU(u){
 
 function compute(){
   const cBase=parseFloat(document.getElementById('crop-sel').value)||0.40;
-  const tMult=parseFloat(document.getElementById('till-sel').value)||1.0;
+  const tMult=getCombinedTillageMultiplier();
   let ccMult=1.0;
   if(selectedCoverCrops.size>0){
     selectedCoverCrops.forEach(item=>{ccMult*=item.mult;});
@@ -757,6 +833,7 @@ function compute(){
     p=Math.max(p,0.01);
   }
   state.p=p;
+  document.getElementById('till-out').textContent=tMult.toFixed(3);
   document.getElementById('cc-out').textContent=ccMult.toFixed(3);
   document.getElementById('c-out').textContent=c.toFixed(3);
   document.getElementById('p-out').textContent=p.toFixed(3);
@@ -918,6 +995,7 @@ function collectReportData(){
   const totalUnit=document.getElementById('total-unit').textContent;
   const practices=selectedPracs.size>0?[...selectedPracs.values()].map(i=>`${i.code} ${i.n}`).join(', '):'None selected';
   const coverCrops=selectedCoverCrops.size>0?[...selectedCoverCrops.values()].map(i=>i.n).join(', '):'None selected';
+  const tillages=selectedTillages.size>0?[...selectedTillages.values()].map(i=>i.n).join(', '):'None selected';
   return {
     title:'SCI Field Erosion Estimate',
     date:new Date().toLocaleDateString(),
@@ -933,7 +1011,7 @@ function collectReportData(){
     area:getTextValue('area-input',''),
     areaUnit,
     crop:selectedOptionText('crop-sel'),
-    tillage:selectedOptionText('till-sel'),
+    tillage:tillages,
     cover:coverCrops,
     texture:state.texName,
     result:document.getElementById('res-num').textContent,
@@ -941,7 +1019,7 @@ function collectReportData(){
     total:document.getElementById('total-loss').textContent,
     totalUnit,
     verdict:document.getElementById('verdict').textContent.trim(),
-    factors:`R ${state.r} | K ${state.k.toFixed(2)} | LS ${state.ls.toFixed(2)} (slope ${state.spct.toFixed(1)}%, length ${state.lft.toFixed(0)} ft) | C ${state.c.toFixed(3)} | P ${state.p.toFixed(3)}`,
+    factors:`R ${state.r} | K ${state.k.toFixed(2)} | LS ${state.ls.toFixed(2)} (slope ${state.spct.toFixed(1)}%, length ${state.lft.toFixed(0)} ft) | Tillage ×${getCombinedTillageMultiplier().toFixed(3)} | C ${state.c.toFixed(3)} | P ${state.p.toFixed(3)}`,
     practices
   };
 }
@@ -1070,7 +1148,7 @@ function downloadPdfReport(){
   line('Annual Rainfall: ' + d.rainfall + ' inches', 10);
   line('Soil Texture: ' + d.texture, 10);
   line('Cash Crop / Land Use: ' + d.crop, 10);
-  line('Tillage: ' + d.tillage, 10);
+  line('Tillage Operations: ' + d.tillage, 10);
   line('Cover Crop: ' + d.cover, 10);
   y += 8;
 
