@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SCI Field Erosion Estimator</title>
+<meta name="description" content="A simple iframe-ready SCI-branded field erosion estimator using RUSLE-style factors." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sci-earth:#3D2F1E;
+  --sci-clay:#A8551F;
+  --sci-leaf:#3F5C3A;
+  --sci-leaf-deep:#2B4028;
+  --sci-moss:#6B7F4B;
+  --sci-cream:#F5EFE3;
+  --sci-paper:#FFFCF5;
+  --sci-sand:#E6D5B2;
+  --sci-line:#D9CEB5;
+  --sci-ink:#1C1A16;
+  --sci-muted:#6B6458;
+  --sci-danger:#8F2E21;
+  --radius:18px;
+  --shadow:0 18px 45px -28px rgba(61,47,30,.45);
+  --color-background-primary:var(--sci-paper);
+  --color-background-secondary:#F8F2E8;
+  --color-border-secondary:var(--sci-line);
+  --color-border-tertiary:rgba(61,47,30,.14);
+  --color-text-primary:var(--sci-ink);
+  --color-text-secondary:var(--sci-muted);
+  --color-text-tertiary:#8A8172;
+  --color-text-danger:var(--sci-danger);
+  --border-radius-md:12px;
+  --border-radius-lg:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:transparent;color:var(--sci-ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{padding:0}
+a{color:var(--sci-leaf-deep);text-decoration-thickness:1px;text-underline-offset:3px}
+button,input,select{font:inherit}
+button{border:1px solid var(--sci-leaf-deep);background:var(--sci-leaf-deep);color:#fff;border-radius:999px;padding:10px 15px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 20px -16px rgba(43,64,40,.65);transition:transform .15s ease,background .15s ease,border-color .15s ease}
+button:hover{transform:translateY(-1px);background:var(--sci-leaf);border-color:var(--sci-leaf)}
+.w{max-width:980px;margin:0 auto;padding:18px 16px 24px;background:linear-gradient(180deg,rgba(245,239,227,.78),rgba(255,252,245,.92));border:1px solid rgba(217,206,181,.75);border-radius:24px;box-shadow:var(--shadow)}
+.w:before{content:"Soil & Climate Initiative";display:inline-flex;margin:0 0 12px;padding:6px 11px;border:1px solid rgba(168,85,31,.24);border-radius:999px;color:var(--sci-clay);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;background:rgba(255,252,245,.65)}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--sci-line);padding-bottom:16px}
+.hdr>div:first-child>div:first-child{font-family:Fraunces,Georgia,serif!important;font-size:clamp(28px,4vw,42px)!important;line-height:1.04!important;letter-spacing:-.025em;color:var(--sci-earth)!important;font-weight:450!important}
+.hdr>div:first-child>div:nth-child(2){font-size:14px!important;color:var(--sci-muted)!important;margin-top:8px!important}
+.utog{display:flex;border:1px solid var(--sci-line);border-radius:999px;overflow:hidden;background:var(--sci-paper)}
+.utog button{padding:8px 14px;font-size:12px;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--sci-muted);font-weight:650;transform:none}.utog button.on{background:var(--sci-leaf-deep);color:#fff}.utog button:hover{background:var(--sci-leaf);color:#fff;transform:none}
+.slbl{font-size:11px;font-weight:800;color:var(--sci-clay);text-transform:uppercase;letter-spacing:.15em;margin:18px 0 8px}
+.card{background:rgba(255,252,245,.88);border:1px solid var(--sci-line);border-radius:var(--radius);padding:18px;margin-bottom:12px;box-shadow:0 2px 14px rgba(61,47,30,.045)}
+.card-hd{display:flex;align-items:center;gap:12px;margin-bottom:14px}.ico{width:38px;height:38px;border-radius:999px;background:var(--sci-leaf-deep)!important;color:#fff!important;display:grid;place-items:center;font-size:17px;flex-shrink:0}.card-hd-txt strong{font-size:15px;font-weight:750;color:var(--sci-earth);display:block}.card-hd-txt span{font-size:12px;color:var(--sci-muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}@media(max-width:640px){.row2,.row3{grid-template-columns:1fr}.w{padding:14px 12px 20px;border-radius:18px}.hdr>div:first-child>div:first-child{font-size:30px!important}.factors-mini{grid-template-columns:repeat(2,1fr)!important}.sl-row{align-items:flex-start;flex-direction:column}.sl-row label{flex:auto!important}.res .act-row{display:grid;grid-template-columns:1fr}.res .act-row button{width:100%;justify-content:center}}
+.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;color:var(--sci-muted);font-weight:650}.field input[type=number],.field input[type=text],.field select,.prac-search{width:100%;font-size:14px;padding:0 11px;height:40px;border-radius:12px;border:1px solid var(--sci-line);background:#fffdfa;color:var(--sci-ink)}.field input:focus,.field select:focus,.prac-search:focus{outline:none;border-color:var(--sci-leaf);box-shadow:0 0 0 3px rgba(63,92,58,.12)}
+.note{font-size:12px;color:var(--sci-muted);margin-top:8px}.slope-help{margin-top:12px;border:1px solid var(--sci-line);border-radius:14px;padding:10px 12px;background:#F8F2E8}.slope-help summary{cursor:pointer;font-size:12px;font-weight:750;color:var(--sci-earth)}.slope-help ol{margin:8px 0 0 18px;font-size:12px;color:var(--sci-muted);line-height:1.5}.slope-help li{margin-bottom:5px}.r-computed{font-size:12px;color:var(--sci-muted);margin-top:10px}
+.tex-bar{height:12px;border-radius:999px;background:#F8F2E8;border:1px solid var(--sci-line);overflow:hidden;margin-top:8px;display:flex}.tex-s{background:#D89A3A!important;height:100%}.tex-si{background:#8EA56A!important;height:100%}.tex-c{background:#A8551F!important;height:100%}.tex-label{display:flex;gap:12px;font-size:11px;margin-top:6px;color:var(--sci-muted)}.tex-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}.sl-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}.sl-row label{font-size:13px;color:var(--sci-muted);flex:0 0 135px}.sl-row input[type=range]{flex:1;accent-color:var(--sci-leaf-deep)}.sl-row .sv{font-size:13px;font-weight:750;color:var(--sci-earth);min-width:44px;text-align:right}
+.prac-list{max-height:220px;overflow-y:auto;border:1px solid var(--sci-line);border-radius:14px;background:#fffdfa}.prac-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-bottom:1px solid rgba(217,206,181,.65);cursor:pointer;font-size:12px;color:var(--sci-ink)}.prac-item:last-child{border-bottom:none}.prac-item:hover{background:#F8F2E8}.prac-item.checked{background:#EEF3E7}.prac-item input[type=checkbox]{accent-color:var(--sci-leaf-deep);flex-shrink:0;width:15px;height:15px;cursor:pointer}.prac-code{font-size:10px;color:#8A8172;flex-shrink:0;min-width:34px;font-weight:750}.prac-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:24px}.ptag{background:#EEF3E7;color:var(--sci-leaf-deep);border:1px solid rgba(63,92,58,.16);border-radius:999px;font-size:11px;padding:4px 9px;display:flex;align-items:center;gap:5px}.ptag button{background:none;border:none;box-shadow:none;cursor:pointer;color:var(--sci-leaf-deep);font-size:14px;line-height:1;padding:0;transform:none}.ptag button:hover{background:transparent;color:var(--sci-clay)}
+.res{background:linear-gradient(135deg,var(--sci-leaf-deep),var(--sci-leaf));border-radius:22px;padding:22px;margin-top:14px;color:#fff;box-shadow:0 20px 50px -25px rgba(43,64,40,.65)}.res *{color:inherit!important}.res-num{font-family:Fraunces,Georgia,serif;font-size:48px;font-weight:520;line-height:1}.verdict{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:750;margin-top:10px}.v-ok{background:rgba(238,243,231,.96);color:var(--sci-leaf-deep)!important}.v-caut{background:#FAEEDA;color:#633806!important}.v-bad{background:#FCEBEB;color:#791F1F!important}.v-crit{background:#F7C1C1;color:#791F1F!important}.factors-mini{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}.fm{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:8px;text-align:center}.fm-lbl{font-size:10px;opacity:.74}.fm-val{font-size:14px;font-weight:800}.act-row{margin-top:18px;display:flex;flex-wrap:wrap;gap:12px}.res .act-row button{background:var(--sci-paper)!important;color:var(--sci-leaf-deep)!important;border:1px solid rgba(255,255,255,.88)!important;box-shadow:0 10px 22px -16px rgba(0,0,0,.55);font-size:13px;font-weight:800;min-height:44px;padding:11px 18px}.res .act-row button:hover{background:var(--sci-cream)!important;color:var(--sci-earth)!important;border-color:var(--sci-cream)!important}.res .act-row button:focus-visible{outline:3px solid rgba(255,252,245,.65);outline-offset:3px}.res .act-row button *{color:inherit!important}.grp-hdr{font-size:10px;font-weight:800;color:var(--sci-clay);text-transform:uppercase;letter-spacing:.11em;padding:7px 10px 4px;background:#F8F2E8;border-bottom:1px solid rgba(217,206,181,.65)}
+
+.kml-card{border-style:dashed;background:rgba(248,242,232,.72)}
+.file-input{width:100%;font-size:13px;padding:10px;border-radius:12px;border:1px dashed var(--sci-line);background:#fffdfa;color:var(--sci-muted)}
+.field-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;background:#fffdfa;border:1px solid var(--sci-line);border-radius:14px;overflow:hidden;display:table}
+.field-table th,.field-table td{padding:8px 9px;border-bottom:1px solid rgba(217,206,181,.65);text-align:left}
+.field-table th{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--sci-clay);background:#F8F2E8}.field-table tr:last-child td{border-bottom:0}.pill-muted{display:inline-flex;align-items:center;border:1px solid rgba(61,47,30,.12);border-radius:999px;padding:3px 8px;background:#fffdfa;color:var(--sci-muted);font-size:11px}.small-action{padding:6px 10px;font-size:11px;box-shadow:none}.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.report-note{font-size:11px;color:var(--sci-muted);margin-top:8px}.status-ok{color:var(--sci-leaf-deep);font-weight:700}.status-warn{color:var(--sci-danger);font-weight:700}
+
+</style>
+</head>
+<body>
+
+<div class="w">
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">RUSLE2 field erosion estimator with NRCS practice codes</h2>
+
+<div class="hdr">
+  <div>
+    <div style="font-size:20px;font-weight:500;color:var(--color-text-primary)">SCI Field Erosion Estimator</div>
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-top:2px">Clean farmer-facing estimate — RUSLE-style factors</div>
+  </div>
+  <div class="utog" role="group">
+    <button id="bu" class="on" onclick="setU('us')">Acres / tons</button>
+    <button id="bsi" onclick="setU('si')">Hectares / Mg</button>
+  </div>
+</div>
+
+
+<div class="slbl">Farm details</div>
+<div class="card">
+  <div class="card-hd">
+    <div class="ico" aria-hidden="true">⌂</div>
+    <div class="card-hd-txt"><strong>Farm and operator information</strong><span>Used in the downloadable report and field notes</span></div>
+  </div>
+  <div class="row3">
+    <div class="field"><label>Farm / business name</label><input type="text" id="farm-name" placeholder="e.g. Green Valley Farms" oninput="postEmbedHeight()"></div>
+    <div class="field"><label>Producer / operator</label><input type="text" id="producer-name" placeholder="Name" oninput="postEmbedHeight()"></div>
+    <div class="field"><label>County / state</label><input type="text" id="county-state" placeholder="County, ST" oninput="postEmbedHeight()"></div>
+  </div>
+  <div class="row2" style="margin-top:12px">
+    <div class="field"><label>Tract / farm number</label><input type="text" id="tract-number" placeholder="Optional" oninput="postEmbedHeight()"></div>
+    <div class="field"><label>Report notes</label><input type="text" id="report-notes" placeholder="Optional notes for the PDF" oninput="postEmbedHeight()"></div>
+  </div>
+</div>
+
+<div class="slbl">Field boundary import</div>
+<div class="card kml-card">
+  <div class="card-hd">
+    <div class="ico" aria-hidden="true">⌖</div>
+    <div class="card-hd-txt"><strong>Upload KML field boundaries</strong><span>Reads Placemark names and polygon acres, then fills the field size</span></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label>KML file</label><input class="file-input" type="file" id="kml-file" accept=".kml,application/vnd.google-earth.kml+xml,text/xml,application/xml" onchange="handleKmlUpload(event)"></div>
+    <div class="field"><label>Imported field</label><select id="field-select" onchange="selectImportedField()"><option value="">No KML field selected</option></select></div>
+  </div>
+  <div class="note">KML Placemarks with Polygon boundaries are supported. MultiGeometry is supported when polygons are included. KMZ zipped files are not supported in this lightweight embed.</div>
+  <div id="kml-status" class="report-note">No KML uploaded.</div>
+  <div id="field-table-wrap" style="display:none"></div>
+</div>
+
+<div class="slbl">Step 1 — Rainfall (R factor)</div>
+<div class="card">
+  <div class="card-hd">
+    <div class="ico" aria-hidden="true">✓</div>
+    <div class="card-hd-txt"><strong>Location &amp; annual rainfall</strong><span>Enter your ZIP and average inches of rain per year</span></div>
+  </div>
+  <div class="row3">
+    <div class="field"><label>ZIP code</label><input type="text" id="zip" placeholder="e.g. 61801" maxlength="5" inputmode="numeric"></div>
+    <div class="field"><label>Annual rainfall (inches)</label><input type="number" id="rain-in" min="4" max="120" step="1" value="36" oninput="rainChanged()"></div>
+    <div class="field"><label id="area-lbl">Field size (acres)</label><input type="number" id="area-input" min="0.1" max="100000" step="0.1" value="40" oninput="compute()"></div>
+  </div>
+
+  <div class="row2" style="margin-top:12px">
+    <div class="field"><label>Field name</label><input type="text" id="field-name" placeholder="Field name from KML or manual entry" oninput="compute()"></div>
+    <div class="field"><label>Boundary source</label><input type="text" id="boundary-source" placeholder="Manual entry" value="Manual entry" readonly></div>
+  </div>
+  <div class="note">Not sure? Check <a href="https://www.weather.gov" target="_blank">weather.gov</a> or your local extension office.</div>
+  <div class="r-computed">R factor: <strong id="r-display">162</strong> <span id="r-unit-lbl">EI units</span> — computed from rainfall inches</div>
+</div>
+
+<div class="slbl">Step 2 — Soil texture (K factor)</div>
+<div class="card">
+  <div class="card-hd">
+    <div class="ico" style="background:#FAEEDA"><i class="ti ti-layers" style="color:#854F0B" aria-hidden="true"></i></div>
+    <div class="card-hd-txt"><strong>Sand, silt &amp; clay percentages</strong><span>Must add up to 100%</span></div>
+  </div>
+  <div class="row3">
+    <div class="field"><label>Sand %</label><input type="number" id="sand" min="0" max="100" value="40" oninput="calcTexture()"></div>
+    <div class="field"><label>Silt %</label><input type="number" id="silt" min="0" max="100" value="40" oninput="calcTexture()"></div>
+    <div class="field"><label>Clay %</label><input type="number" id="clay" min="0" max="100" value="20" oninput="calcTexture()"></div>
+  </div>
+  <div id="tex-warn" style="font-size:12px;color:var(--color-text-danger);margin-top:4px;min-height:16px"></div>
+  <div class="tex-bar"><div class="tex-s" id="ts"></div><div class="tex-si" id="tsi"></div><div class="tex-c" id="tc"></div></div>
+  <div class="tex-label"><span><span class="tex-dot" style="background:#EF9F27"></span>Sand</span><span><span class="tex-dot" style="background:#5DCAA5"></span>Silt</span><span><span class="tex-dot" style="background:#AFA9EC"></span>Clay</span></div>
+  <div style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin-top:6px" id="tex-name">Loam</div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">Estimated K = <strong id="k-out" style="color:var(--color-text-primary)">0.30</strong> <span style="font-size:11px;color:var(--color-text-tertiary)" id="k-unit-lbl"></span></div>
+  <div class="field" style="margin-top:8px"><label>Fine-tune K if you have a soil test</label><input type="number" id="k-manual" min="0.01" max="0.65" step="0.01" value="0.30" oninput="kManual()"></div>
+</div>
+
+<div class="slbl">Step 3 — Slope (LS factor)</div>
+<div class="card">
+  <div class="card-hd">
+    <div class="ico" style="background:#E6F1FB"><i class="ti ti-trending-up" style="color:#185FA5" aria-hidden="true"></i></div>
+    <div class="card-hd-txt"><strong>Slope steepness</strong><span>Enter percent slope only</span></div>
+  </div>
+  <div class="sl-row"><label>Percent slope (%)</label><input type="range" id="s-sl" min="0.5" max="30" step="0.5" value="6" oninput="calcLS()"><span class="sv" id="s-sv">6.0</span></div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px">Computed LS = <strong id="ls-out" style="color:var(--color-text-primary)">—</strong> &nbsp;<span id="slope-desc" style="font-size:11px;color:var(--color-text-tertiary)"></span></div>
+  <div class="note">Uses a fixed representative slope length of 200 ft for a simple farmer-facing estimate.</div>
+  <details class="slope-help">
+    <summary>How to get percent slope</summary>
+    <ol>
+      <li><strong>Best source:</strong> use a conservation plan, RUSLE2 worksheet, NRCS planner value, LiDAR/topographic map, or Web Soil Survey slope class for the field.</li>
+      <li><strong>Field method:</strong> measure vertical rise over horizontal run, then calculate <strong>(rise ÷ run) × 100</strong>. Example: 6 ft rise over 100 ft run = 6% slope.</li>
+      <li><strong>Phone/map method:</strong> use a phone GPS/elevation app, laser level, transit, or two marked points with known elevation difference. Use the dominant field slope, not the steepest short spot.</li>
+    </ol>
+  </details>
+</div>
+
+<div class="slbl">Step 4 — Cash crop &amp; tillage (C factor)</div>
+<div class="card">
+  <div class="card-hd">
+    <div class="ico" style="background:#EAF3DE"><i class="ti ti-plant" style="color:#3B6D11" aria-hidden="true"></i></div>
+    <div class="card-hd-txt"><strong>Cash crop, cover crop &amp; tillage</strong><span>All three affect your C factor</span></div>
+  </div>
+  <div class="row2" style="margin-bottom:10px">
+    <div class="field"><label>Cash crop / land use</label><select id="crop-sel" onchange="compute()"></select></div>
+    <div class="field"><label>Tillage system</label><select id="till-sel" onchange="compute()"></select></div>
+  </div>
+  <div class="field">
+    <label>Cover crop (NRCS Practice 340)</label>
+    <select id="cc-sel" onchange="compute()"></select>
+  </div>
+  <div class="note">Dropdown includes the individual species shown on the USDA-ARS / NRCS Cover Crop Chart v4.0, plus mix and residue-only options.</div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px">Effective C factor: <strong id="c-out" style="color:var(--color-text-primary)">—</strong></div>
+</div>
+
+<div class="slbl">Step 5 — Conservation practices (P factor)</div>
+<div class="card">
+  <div class="card-hd">
+    <div class="ico" style="background:#E1F5EE"><i class="ti ti-tractor" style="color:#0F6E56" aria-hidden="true"></i></div>
+    <div class="card-hd-txt"><strong>Select all practices on your field</strong><span>Multiple practices combine — P factors multiply together</span></div>
+  </div>
+  <input class="prac-search" type="text" id="prac-search" placeholder="Search by name or code (e.g. 330, terrace, filter strip)…" oninput="filterPracs()">
+  <div class="prac-list" id="prac-list"></div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:10px">Selected practices:</div>
+  <div class="prac-tags" id="prac-tags"><span style="font-size:12px;color:var(--color-text-tertiary)">None selected</span></div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px">Combined P factor: <strong id="p-out" style="color:var(--color-text-primary)">1.00</strong></div>
+</div>
+
+<div class="res">
+  <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px">Estimated annual soil loss</div>
+  <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <div class="res-num" id="res-num">—</div>
+    <div style="font-size:14px;color:var(--color-text-secondary)" id="res-unit">ton / ac / yr</div>
+  </div>
+  <div style="font-size:13px;color:var(--color-text-secondary);margin-top:4px">Total field soil loss: <strong id="total-loss" style="color:var(--color-text-primary)">—</strong> <span id="total-unit">tons / yr</span></div>
+  <div id="verdict" class="verdict v-ok"></div>
+  <div class="factors-mini">
+    <div class="fm"><div class="fm-lbl">R</div><div class="fm-val" id="fm-r">—</div></div>
+    <div class="fm"><div class="fm-lbl">K</div><div class="fm-val" id="fm-k">—</div></div>
+    <div class="fm"><div class="fm-lbl">LS</div><div class="fm-val" id="fm-ls">—</div></div>
+    <div class="fm"><div class="fm-lbl">C</div><div class="fm-val" id="fm-c">—</div></div>
+    <div class="fm"><div class="fm-lbl">P</div><div class="fm-val" id="fm-p">—</div></div>
+  </div>
+  <div class="act-row">
+    <button onclick="downloadPdfReport()">Download PDF report ↓</button>
+  </div>
+</div>
+</div>
+
+<script>
+let unit='us';
+let state={r:162,k:0.30,ls:1.8,c:0.25,p:1.0,lft:200,spct:6,texName:'Loam'};
+let selectedPracs=new Map();
+
+const CROPS=[
+  {g:'Corn & grain crops',items:[
+    {n:'Corn — grain',b:0.40},{n:'Corn — silage',b:0.42},{n:'Corn — sweet corn',b:0.45},
+    {n:'Popcorn',b:0.42},{n:'Grain sorghum (milo)',b:0.35},{n:'Sorghum — forage',b:0.25},
+    {n:'Sorghum-sudan',b:0.25},{n:'Sudangrass',b:0.24},{n:'Pearl millet — grain',b:0.28},
+    {n:'Proso millet',b:0.28},{n:'Foxtail millet',b:0.28},{n:'Teff — grain/forage',b:0.22},
+    {n:'Buckwheat',b:0.30},{n:'Quinoa',b:0.32},{n:'Amaranth — grain',b:0.32},
+    {n:'Wild rice',b:0.18},{n:'Rice — flood irrigated',b:0.16},{n:'Rice — upland/drill seeded',b:0.28}
+  ]},
+  {g:'Soybeans, pulses & oilseeds',items:[
+    {n:'Soybeans',b:0.45},{n:'Edamame / vegetable soybean',b:0.46},{n:'Peanuts',b:0.50},
+    {n:'Dry beans',b:0.48},{n:'Snap beans / green beans',b:0.50},{n:'Lima beans',b:0.50},
+    {n:'Cowpeas',b:0.42},{n:'Chickpeas / garbanzo',b:0.42},{n:'Field peas',b:0.35},
+    {n:'Lentils',b:0.38},{n:'Faba beans',b:0.38},{n:'Mung beans',b:0.45},
+    {n:'Sunflowers',b:0.40},{n:'Canola / rapeseed',b:0.26},{n:'Camelina',b:0.24},
+    {n:'Safflower',b:0.38},{n:'Flax',b:0.28},{n:'Sesame',b:0.42},{n:'Mustard seed',b:0.28}
+  ]},
+  {g:'Cotton, fiber & industrial crops',items:[
+    {n:'Cotton',b:0.50},{n:'Tobacco',b:0.55},{n:'Sugar beets',b:0.55},{n:'Sugarcane',b:0.28},
+    {n:'Hemp — fiber/grain',b:0.26},{n:'Kenaf',b:0.28},{n:'Hops',b:0.32},{n:'Mint',b:0.22}
+  ]},
+  {g:'Small grains',items:[
+    {n:'Winter wheat',b:0.15},{n:'Spring wheat',b:0.20},{n:'Durum wheat',b:0.20},
+    {n:'Oats',b:0.15},{n:'Barley',b:0.18},{n:'Rye',b:0.12},{n:'Triticale',b:0.15},
+    {n:'Spelt',b:0.16},{n:'Emmer / einkorn',b:0.16},{n:'Mixed small grain',b:0.16}
+  ]},
+  {g:'Hay, forage & perennial legumes',items:[
+    {n:'Alfalfa — established',b:0.02},{n:'Alfalfa — establishment year',b:0.10},{n:'Grass hay — established',b:0.02},
+    {n:'Mixed grass-legume hay',b:0.03},{n:'Clover hay',b:0.03},{n:'Red clover',b:0.04},
+    {n:'White clover',b:0.04},{n:'Birdsfoot trefoil',b:0.04},{n:'Sainfoin',b:0.04},
+    {n:'Bermudagrass hay',b:0.02},{n:'Orchardgrass hay',b:0.02},{n:'Timothy hay',b:0.02},
+    {n:'Tall fescue hay',b:0.02},{n:'Switchgrass',b:0.03},{n:'Native warm-season grass hay',b:0.03},
+    {n:'Silage corn',b:0.40},{n:'Annual forage mix',b:0.18}
+  ]},
+  {g:'Vegetables — roots, bulbs & tubers',items:[
+    {n:'Potatoes',b:0.50},{n:'Sweet potatoes',b:0.45},{n:'Carrots',b:0.48},{n:'Beets — table',b:0.48},
+    {n:'Radishes',b:0.45},{n:'Turnips',b:0.43},{n:'Rutabagas',b:0.43},{n:'Parsnips',b:0.48},
+    {n:'Onions',b:0.52},{n:'Garlic',b:0.44},{n:'Leeks',b:0.45},{n:'Shallots',b:0.45}
+  ]},
+  {g:'Vegetables — fruiting & cucurbits',items:[
+    {n:'Tomatoes — field',b:0.45},{n:'Peppers',b:0.45},{n:'Eggplant',b:0.45},{n:'Okra',b:0.42},
+    {n:'Cucumbers',b:0.45},{n:'Pumpkins',b:0.40},{n:'Winter squash',b:0.40},{n:'Summer squash / zucchini',b:0.42},
+    {n:'Watermelon',b:0.42},{n:'Cantaloupe / muskmelon',b:0.42},{n:'Honeydew melon',b:0.42}
+  ]},
+  {g:'Vegetables — leafy & brassicas',items:[
+    {n:'Lettuce',b:0.48},{n:'Spinach',b:0.42},{n:'Kale',b:0.40},{n:'Collards',b:0.40},
+    {n:'Chard',b:0.42},{n:'Cabbage',b:0.42},{n:'Broccoli',b:0.42},{n:'Cauliflower',b:0.42},
+    {n:'Brussels sprouts',b:0.42},{n:'Mustard greens',b:0.40},{n:'Arugula',b:0.42},{n:'Celery',b:0.50},
+    {n:'Vegetables — mixed market garden',b:0.50}
+  ]},
+  {g:'Vegetables — legumes & specialty',items:[
+    {n:'Sweet peas',b:0.38},{n:'Southern peas',b:0.42},{n:'Asparagus',b:0.16},{n:'Artichokes',b:0.22},
+    {n:'Rhubarb',b:0.22},{n:'Herbs — annual',b:0.36},{n:'Herbs — perennial',b:0.12},{n:'Cut flowers',b:0.32}
+  ]},
+  {g:'Pasture & range',items:[
+    {n:'Improved pasture — excellent stand',b:0.01},{n:'Improved pasture — good stand',b:0.02},
+    {n:'Improved pasture — fair stand',b:0.06},{n:'Improved pasture — poor/overgrazed',b:0.10},
+    {n:'Native range — excellent/good',b:0.01},{n:'Native range — fair',b:0.05},{n:'Native range — poor/overgrazed',b:0.15},
+    {n:'Rangeland — arid sparse cover',b:0.20},{n:'Rotationally grazed pasture',b:0.025},{n:'Sacrifice lot / heavy-use area',b:0.35}
+  ]},
+  {g:'Orchards, vineyards & berries',items:[
+    {n:'Apple orchard — grassed alleys',b:0.05},{n:'Apple orchard — bare alleys',b:0.40},
+    {n:'Peach / stone fruit orchard — grassed alleys',b:0.05},{n:'Peach / stone fruit orchard — bare alleys',b:0.40},
+    {n:'Citrus orchard — cover maintained',b:0.06},{n:'Citrus orchard — bare alleys',b:0.38},
+    {n:'Nut orchard — cover maintained',b:0.06},{n:'Nut orchard — bare alleys',b:0.38},
+    {n:'Vineyard — with cover crop',b:0.10},{n:'Vineyard — bare',b:0.50},
+    {n:'Blueberries',b:0.15},{n:'Cranberries',b:0.08},{n:'Strawberries',b:0.38},{n:'Raspberries / blackberries',b:0.16},
+    {n:'Grapes — table/juice/wine',b:0.18}
+  ]},
+  {g:'Trees, agroforestry & specialty perennial',items:[
+    {n:'Woodland / forest — undisturbed',b:0.003},{n:'Woodland — managed with ground cover',b:0.01},
+    {n:'Tree plantation — established',b:0.04},{n:'Christmas trees',b:0.10},{n:'Nursery crops — field grown',b:0.30},
+    {n:'Nursery crops — container area',b:0.12},{n:'Agroforestry alley cropping',b:0.08},{n:'Silvopasture',b:0.03},
+    {n:'Riparian forest buffer',b:0.01},{n:'Windbreak / shelterbelt',b:0.02}
+  ]},
+  {g:'Fallow, bare ground & non-crop',items:[
+    {n:'Bare fallow',b:1.00},{n:'Chem fallow with residue',b:0.45},{n:'Tilled fallow',b:0.80},
+    {n:'Idle field with volunteer cover',b:0.18},{n:'Conservation cover / CRP grass',b:0.02},
+    {n:'Pollinator habitat / prairie planting',b:0.04},{n:'Construction site — bare',b:0.90},
+    {n:'Lawn / turf — established',b:0.01},{n:'Farm lane / heavy traffic area',b:0.35}
+  ]}
+];
+
+const COVER_CROPS=[
+  {n:'None',mult:1.00},
+  {n:'Cover crop mix — grass/legume/brassica',mult:0.42},
+  {n:'Terminated cover — residue only',mult:0.75},
+  {n:'Annual fescue',mult:0.45},
+  {n:'Barley',mult:0.45},
+  {n:'Oat',mult:0.50},
+  {n:'Wheat',mult:0.45},
+  {n:'Annual ryegrass',mult:0.45},
+  {n:'Cereal rye',mult:0.40},
+  {n:'Triticale',mult:0.42},
+  {n:'Saline tolerant grass',mult:0.48},
+  {n:'Camelina',mult:0.65},
+  {n:'Phacelia',mult:0.60},
+  {n:'Flax',mult:0.62},
+  {n:'Kale',mult:0.60},
+  {n:'Spinach',mult:0.65},
+  {n:'Chard',mult:0.65},
+  {n:'Mustard',mult:0.60},
+  {n:'Canola',mult:0.60},
+  {n:'Radish',mult:0.60},
+  {n:'Turnip',mult:0.60},
+  {n:'Beet',mult:0.65},
+  {n:'Carrot',mult:0.65},
+  {n:'Balansa clover',mult:0.55},
+  {n:'Berseem clover',mult:0.55},
+  {n:'Crimson clover',mult:0.55},
+  {n:'Red clover',mult:0.52},
+  {n:'White clover',mult:0.52},
+  {n:'Kura clover',mult:0.52},
+  {n:'Chickpea',mult:0.58},
+  {n:'Pea',mult:0.55},
+  {n:'Lentil',mult:0.58},
+  {n:'Lespedeza',mult:0.55},
+  {n:'Birdsfoot trefoil',mult:0.52},
+  {n:'Vetch',mult:0.50},
+  {n:'Medic',mult:0.55},
+  {n:'Lupin',mult:0.55},
+  {n:'Faba bean',mult:0.55},
+  {n:'Sweet clover',mult:0.52},
+  {n:'Alfalfa',mult:0.45},
+  {n:'Sainfoin',mult:0.52},
+  {n:'Cowpea',mult:0.55},
+  {n:'Lablab',mult:0.55},
+  {n:'Fenugreek',mult:0.58},
+  {n:'Pigeonpea',mult:0.55},
+  {n:'Partridge pea',mult:0.55},
+  {n:'Sunnhemp',mult:0.50},
+  {n:'Cluster bean',mult:0.58},
+  {n:'Jack bean',mult:0.55},
+  {n:'Velvet bean',mult:0.52},
+  {n:'Mung bean',mult:0.58},
+  {n:'Soybean',mult:0.58},
+  {n:'Peanut',mult:0.58},
+  {n:'Amaranth',mult:0.62},
+  {n:'Buckwheat',mult:0.55},
+  {n:'Quinoa',mult:0.60},
+  {n:'Chicory',mult:0.55},
+  {n:'Cucurbita',mult:0.65},
+  {n:'Safflower',mult:0.62},
+  {n:'Sunflower',mult:0.62},
+  {n:'Browntop millet',mult:0.50},
+  {n:'Foxtail millet',mult:0.50},
+  {n:'Pearl millet',mult:0.48},
+  {n:'Proso millet',mult:0.50},
+  {n:'Grain sorghum',mult:0.50},
+  {n:'Sudan grass',mult:0.48},
+  {n:'Teff',mult:0.48},
+  {n:'Corn',mult:0.65}
+];
+
+const TILLAGE=[
+  {n:'No-till',m:0.12},
+  {n:'Strip-till',m:0.25},
+  {n:'Ridge-till',m:0.35},
+  {n:'Mulch-till',m:0.50},
+  {n:'Aggressive-till',m:1.10},
+  {n:'Chisel plow',m:0.65},
+  {n:'Disk',m:0.80},
+  {n:'Field Cult',m:0.60},
+  {n:'Vertical-till',m:0.55},
+  {n:'Rotary harrow',m:0.75},
+  {n:'Sweep plow',m:0.70},
+  {n:'Moldboard plow',m:1.00},
+  {n:'Row Crop Cult',m:0.70},
+  {n:'Rotary Cult',m:0.80},
+  {n:'Chisel Cult',m:0.65},
+  {n:'Spike Tooth Harrow',m:0.70},
+  {n:'Bed Shaper',m:0.85},
+  {n:'Rotary Tiller',m:0.95},
+  {n:'Deep Ripper',m:0.90},
+  {n:'Grader',m:1.00},
+  {n:'Roller',m:0.55},
+  {n:'V-Ripper',m:0.90},
+  {n:'Digger',m:0.90},
+  {n:'Not applicable (pasture / forest)',m:1.00}
+];
+
+const PRACTICES=[
+  {g:'Erosion control — structural',items:[
+    {code:'600',n:'Terrace',p:0.14},
+    {code:'555',n:'Rock Wall Terrace',p:0.12},
+    {code:'638',n:'Water and Sediment Control Basin',p:0.60},
+    {code:'410',n:'Grade Stabilization Structure',p:0.70},
+    {code:'412',n:'Grassed Waterway',p:0.75},
+    {code:'468',n:'Lined Waterway or Outlet',p:0.78},
+    {code:'350',n:'Sediment Basin',p:0.65},
+    {code:'362',n:'Diversion',p:0.70},
+    {code:'423',n:'Hillside Ditch',p:0.72},
+  ]},
+  {g:'Erosion control — vegetative',items:[
+    {code:'330',n:'Contour Farming',p:0.55},
+    {code:'585',n:'Stripcropping',p:0.35},
+    {code:'332',n:'Contour Buffer Strips',p:0.30},
+    {code:'393',n:'Filter Strip',p:0.65},
+    {code:'391',n:'Riparian Forest Buffer',p:0.50},
+    {code:'390',n:'Riparian Herbaceous Cover',p:0.55},
+    {code:'386',n:'Field Border',p:0.80},
+    {code:'601',n:'Vegetative Barrier',p:0.70},
+    {code:'327',n:'Conservation Cover',p:0.60},
+    {code:'342',n:'Critical Area Planting',p:0.65},
+    {code:'604',n:'Saturated Buffer',p:0.60},
+    {code:'605',n:'Denitrifying Bioreactor',p:0.85},
+  ]},
+  {g:'Cropping & residue management',items:[
+    {code:'329',n:'Residue and Tillage Management, No-Till',p:0.85},
+    {code:'345',n:'Residue and Tillage Management, Reduced Till',p:0.90},
+    {code:'328',n:'Conservation Crop Rotation',p:0.90},
+    {code:'340',n:'Cover Crop',p:0.85},
+    {code:'557',n:'Row Arrangement',p:0.90},
+    {code:'588',n:'Cross Wind Ridges',p:0.80},
+    {code:'589',n:'Cross Wind Trap Strips',p:0.75},
+    {code:'609',n:'Surface Roughening',p:0.90},
+    {code:'450',n:'Anionic Polyacrylamide (PAM) Application',p:0.70},
+    {code:'334',n:'Controlled Traffic Farming',p:0.88},
+  ]},
+  {g:'Drainage & water management',items:[
+    {code:'554',n:'Drainage Water Management',p:0.90},
+    {code:'606',n:'Subsurface Drain',p:0.92},
+    {code:'607',n:'Surface Drain, Field Ditch',p:0.88},
+    {code:'608',n:'Surface Drain, Main or Lateral',p:0.88},
+    {code:'587',n:'Structure for Water Control',p:0.80},
+    {code:'447',n:'Irrigation and Drainage Tailwater Recovery',p:0.88},
+  ]},
+  {g:'Windbreaks & barriers',items:[
+    {code:'380',n:'Windbreak/Shelterbelt Establishment',p:0.80},
+    {code:'603',n:'Herbaceous Wind Barriers',p:0.82},
+    {code:'422',n:'Hedgerow Planting',p:0.82},
+  ]},
+  {g:'Grazing & pasture',items:[
+    {code:'528',n:'Grazing Management',p:0.80},
+    {code:'512',n:'Pasture and Hay Planting',p:0.70},
+    {code:'550',n:'Range Planting',p:0.72},
+    {code:'548',n:'Grazing Land Mechanical Treatment',p:0.85},
+  ]},
+  {g:'Nutrient & soil health',items:[
+    {code:'590',n:'Nutrient Management',p:0.92},
+    {code:'333',n:'Amending Soil Properties with Gypsum Products',p:0.88},
+    {code:'336',n:'Soil Carbon Amendment',p:0.90},
+    {code:'484',n:'Mulching',p:0.70},
+  ]},
+  {g:'CRP practices',items:[
+    {code:'CP-1',n:'CP-1 Permanent Introduced Grasses & Legumes',p:0.05},
+    {code:'CP-2',n:'CP-2 Permanent Native Grasses',p:0.04},
+    {code:'CP-8A',n:'CP-8A Grass Waterway',p:0.75},
+    {code:'CP-15A',n:'CP-15A Contour Grass Strips',p:0.35},
+    {code:'CP-21',n:'CP-21 Filter Strip',p:0.65},
+    {code:'CP-22',n:'CP-22 Riparian Buffers',p:0.50},
+    {code:'CP-42',n:'CP-42 Pollinator Habitat',p:0.55},
+    {code:'CP-43',n:'CP-43 Prairie Strips',p:0.30},
+  ]}
+];
+
+let allPracItems=[];
+PRACTICES.forEach(g=>g.items.forEach(i=>allPracItems.push({...i,g:g.g})));
+
+function buildDropdowns(){
+  const cs=document.getElementById('crop-sel');
+  CROPS.forEach(g=>{
+    const og=document.createElement('optgroup');og.label=g.g;
+    g.items.forEach(c=>{const o=document.createElement('option');o.value=c.b;o.textContent=c.n;og.appendChild(o);});
+    cs.appendChild(og);
+  });
+  const ts=document.getElementById('till-sel');
+  TILLAGE.forEach(t=>{const o=document.createElement('option');o.value=t.m;o.textContent=t.n;ts.appendChild(o);});
+  const ccs=document.getElementById('cc-sel');
+  COVER_CROPS.forEach(c=>{const o=document.createElement('option');o.value=c.mult;o.textContent=c.n;ccs.appendChild(o);});
+  renderPracList('');
+}
+
+function renderPracList(q){
+  const el=document.getElementById('prac-list');
+  el.innerHTML='';
+  const qlow=q.toLowerCase();
+  let lastG='';
+  allPracItems.forEach(item=>{
+    if(q&&!item.n.toLowerCase().includes(qlow)&&!item.code.toLowerCase().includes(qlow)) return;
+    if(item.g!==lastG){
+      const gh=document.createElement('div');gh.className='grp-hdr';gh.textContent=item.g;
+      el.appendChild(gh);lastG=item.g;
+    }
+    const div=document.createElement('div');
+    div.className='prac-item'+(selectedPracs.has(item.code)?' checked':'');
+    div.innerHTML=`<input type="checkbox" id="pc-${item.code}" ${selectedPracs.has(item.code)?'checked':''}><span class="prac-code">${item.code}</span><span style="flex:1">${item.n}</span><span style="font-size:11px;color:var(--color-text-tertiary)">P=${item.p.toFixed(2)}</span>`;
+    div.onclick=(e)=>{
+      if(e.target.tagName==='INPUT') return;
+      togglePrac(item);
+    };
+    div.querySelector('input').onchange=()=>togglePrac(item);
+    el.appendChild(div);
+  });
+  if(el.children.length===0){el.innerHTML='<div style="padding:10px;font-size:12px;color:var(--color-text-tertiary)">No practices match your search.</div>';}
+}
+
+function togglePrac(item){
+  if(selectedPracs.has(item.code)) selectedPracs.delete(item.code);
+  else selectedPracs.set(item.code,item);
+  renderPracList(document.getElementById('prac-search').value);
+  renderTags();
+  compute();
+}
+
+function renderTags(){
+  const el=document.getElementById('prac-tags');
+  if(selectedPracs.size===0){el.innerHTML='<span style="font-size:12px;color:var(--color-text-tertiary)">None selected</span>';return;}
+  el.innerHTML='';
+  selectedPracs.forEach((item,code)=>{
+    const t=document.createElement('div');t.className='ptag';
+    t.innerHTML=`<span>${code} — ${item.n.length>28?item.n.slice(0,28)+'…':item.n}</span><button onclick="removePrac('${code}')" aria-label="Remove ${item.n}">×</button>`;
+    el.appendChild(t);
+  });
+}
+
+function removePrac(code){
+  selectedPracs.delete(code);
+  renderPracList(document.getElementById('prac-search').value);
+  renderTags();compute();
+}
+
+function filterPracs(){renderPracList(document.getElementById('prac-search').value);}
+
+function rainChanged(){
+  const inches=parseFloat(document.getElementById('rain-in').value)||0;
+  const R_us=Math.round(inches*4.5);
+  state.r=unit==='si'?Math.round(R_us*0.1745*10)/10:R_us;
+  document.getElementById('r-display').textContent=state.r;
+  compute();
+}
+
+function classifyTexture(s,si,cl){
+  if(cl>=40&&s<=45&&si<=40) return 'Clay';
+  if(cl>=40&&si>=40) return 'Silty clay';
+  if(cl>=35&&s>=45) return 'Sandy clay';
+  if(cl>=27&&cl<40&&s<=20) return 'Silty clay loam';
+  if(cl>=27&&cl<40&&s<=45) return 'Clay loam';
+  if(cl>=20&&cl<35&&s>=45&&si<28) return 'Sandy clay loam';
+  if(si>=80&&cl<12) return 'Silt';
+  if(si>=50&&cl>=12&&cl<27) return 'Silty clay loam';
+  if(si>=50||(si>=30&&cl<27)) return 'Silt loam';
+  if(s>=85) return 'Sand';
+  if(s>=70&&cl<15) return 'Loamy sand';
+  if(s>=70&&cl<20) return 'Sandy loam';
+  return 'Loam';
+}
+function kFromTexture(tex){
+  return {'Sand':0.05,'Loamy sand':0.10,'Sandy loam':0.20,'Sandy clay loam':0.22,'Loam':0.30,
+    'Silt loam':0.42,'Silt':0.48,'Clay loam':0.22,'Silty clay loam':0.32,
+    'Sandy clay':0.14,'Silty clay':0.18,'Clay':0.10}[tex]||0.28;
+}
+function calcTexture(){
+  const s=parseFloat(document.getElementById('sand').value)||0;
+  const si=parseFloat(document.getElementById('silt').value)||0;
+  const cl=parseFloat(document.getElementById('clay').value)||0;
+  const tot=s+si+cl;
+  document.getElementById('tex-warn').textContent=Math.abs(tot-100)>1?'Total = '+tot+'% (should be 100%)':'';
+  const p=Math.max(tot,1);
+  document.getElementById('ts').style.width=(s/p*100).toFixed(1)+'%';
+  document.getElementById('tsi').style.width=(si/p*100).toFixed(1)+'%';
+  document.getElementById('tc').style.width=(cl/p*100).toFixed(1)+'%';
+  const tex=classifyTexture(s,si,cl);
+  const k=kFromTexture(tex);
+  document.getElementById('tex-name').textContent=tex;
+  document.getElementById('k-out').textContent=k.toFixed(2);
+  document.getElementById('k-manual').value=k.toFixed(2);
+  state.k=k;state.texName=tex;compute();
+}
+function kManual(){state.k=parseFloat(document.getElementById('k-manual').value)||0.30;compute();}
+
+function calcLS(){
+  const S=parseFloat(document.getElementById('s-sl').value)||0;
+  document.getElementById('s-sv').textContent=S.toFixed(1);
+  const Lft=200; // fixed representative slope length for simplified percent-slope-only input
+  const theta=Math.atan(S/100);
+  const sinT=Math.sin(theta);
+  const m=sinT>=0.09?0.6:sinT>=0.05?0.5:sinT>=0.03?0.4:0.3;
+  const Sf=S<9?(10.8*sinT+0.03):(16.8*sinT-0.5);
+  const ls=Math.pow(Lft/72.6,m)*Sf;
+  state.ls=ls;state.lft=Lft;state.spct=S;
+  document.getElementById('ls-out').textContent=ls.toFixed(2);
+  const desc=S<2?'Nearly flat':S<5?'Gentle':S<10?'Moderate':S<20?'Steep':'Very steep';
+  document.getElementById('slope-desc').textContent='('+desc+' slope)';
+  compute();
+}
+
+function setU(u){
+  if(u===unit) return;
+  const areaEl=document.getElementById('area-input');
+  const currentArea=parseFloat(areaEl.value)||0;
+  const oldUnit=unit;
+  unit=u;
+  if(areaEl && currentArea>0){
+    if(oldUnit==='us' && u==='si') areaEl.value=(currentArea*0.404686).toFixed(2);
+    if(oldUnit==='si' && u==='us') areaEl.value=(currentArea/0.404686).toFixed(2);
+  }
+  document.getElementById('bu').classList.toggle('on',u==='us');
+  document.getElementById('bsi').classList.toggle('on',u==='si');
+  const inches=parseFloat(document.getElementById('rain-in').value)||36;
+  const R_us=Math.round(inches*4.5);
+  if(u==='si'){
+    state.r=Math.round(R_us*0.1745*10)/10;
+    document.getElementById('r-unit-lbl').textContent='MJ·mm/ha·hr·yr';
+    document.getElementById('k-unit-lbl').textContent='Mg·ha·hr / ha·MJ·mm';
+    document.getElementById('area-lbl').textContent='Field size (hectares)';
+    document.getElementById('res-unit').textContent='Mg / ha / yr';
+    document.getElementById('total-unit').textContent='Mg / yr';
+  } else {
+    state.r=R_us;
+    document.getElementById('r-unit-lbl').textContent='EI units';
+    document.getElementById('k-unit-lbl').textContent='ton·ac·hr / ac·hundreds ft·tonf·in';
+    document.getElementById('area-lbl').textContent='Field size (acres)';
+    document.getElementById('res-unit').textContent='ton / ac / yr';
+    document.getElementById('total-unit').textContent='tons / yr';
+  }
+  document.getElementById('r-display').textContent=state.r;
+  calcLS();
+}
+
+function compute(){
+  const cBase=parseFloat(document.getElementById('crop-sel').value)||0.40;
+  const tMult=parseFloat(document.getElementById('till-sel').value)||1.0;
+  const ccMult=parseFloat(document.getElementById('cc-sel').value)||1.0;
+  const c=Math.min(cBase*tMult*ccMult,1.0);
+  state.c=c;
+
+  let p=1.0;
+  if(selectedPracs.size>0){
+    selectedPracs.forEach(item=>{p*=item.p;});
+    p=Math.max(p,0.01);
+  }
+  state.p=p;
+  document.getElementById('c-out').textContent=c.toFixed(3);
+  document.getElementById('p-out').textContent=p.toFixed(3);
+
+  let R=state.r,K=state.k;
+  if(unit==='si'){R=R/0.1745;K=K/0.1317;}
+  let A=R*K*state.ls*c*p;
+  if(unit==='si') A*=1.1209;
+
+  const area=parseFloat(document.getElementById('area-input').value)||0;
+  const total=A*area;
+  document.getElementById('res-num').textContent=A.toFixed(2);
+  document.getElementById('total-loss').textContent=total.toLocaleString(undefined,{maximumFractionDigits:2});
+  document.getElementById('fm-r').textContent=state.r;
+  document.getElementById('fm-k').textContent=state.k.toFixed(2);
+  document.getElementById('fm-ls').textContent=state.ls.toFixed(2);
+  document.getElementById('fm-c').textContent=c.toFixed(3);
+  document.getElementById('fm-p').textContent=p.toFixed(3);
+
+  const v=document.getElementById('verdict');
+  const isM=unit==='si';
+  const T=[isM?2.2:1,isM?11.2:5,isM?22.4:10];
+  if(A<=T[0]){v.className='verdict v-ok';v.innerHTML='✓ Good — within soil loss tolerance';}
+  else if(A<=T[1]){v.className='verdict v-caut';v.innerHTML='⚠ Caution — exceeds tolerance';}
+  else if(A<=T[2]){v.className='verdict v-bad';v.innerHTML='⚠ High erosion — action recommended';}
+  else{v.className='verdict v-crit';v.innerHTML='! Critical — contact your local NRCS office';}
+}
+
+function getTextValue(id,fallback=''){
+  const el=document.getElementById(id);
+  return el?(el.value||fallback).trim():fallback;
+}
+function selectedOptionText(id){
+  const el=document.getElementById(id);
+  if(!el||el.selectedIndex<0) return '';
+  return el.options[el.selectedIndex].text;
+}
+
+function handleKmlUpload(event){
+  const file=event.target.files && event.target.files[0];
+  const status=document.getElementById('kml-status');
+  if(!file){return;}
+  if(!file.name.toLowerCase().endsWith('.kml')){
+    status.innerHTML='<span class="status-warn">Please upload a .kml file.</span> KMZ is not supported in this lightweight iframe.';
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      importedFields=parseKmlFields(String(reader.result||''));
+      renderImportedFields(file.name);
+    }catch(err){
+      importedFields=[];
+      status.innerHTML='<span class="status-warn">Could not read this KML.</span> '+(err && err.message ? err.message : 'Check that it contains Polygon Placemarks.');
+      renderImportedFields(file.name);
+    }
+    postEmbedHeight();
+  };
+  reader.readAsText(file);
+}
+
+function parseKmlFields(kmlText){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(kmlText,'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error('The file is not valid XML/KML.');
+  const placemarks=[...doc.getElementsByTagName('Placemark')];
+  const results=[];
+  placemarks.forEach((pm,idx)=>{
+    const nameEl=pm.getElementsByTagName('name')[0];
+    const name=(nameEl && nameEl.textContent.trim()) || `Field ${idx+1}`;
+    const coordEls=[...pm.getElementsByTagName('coordinates')];
+    let acres=0;
+    let polygonCount=0;
+    coordEls.forEach(c=>{
+      const pts=parseKmlCoordinates(c.textContent||'');
+      if(pts.length>=3){
+        acres += polygonAcres(pts);
+        polygonCount++;
+      }
+    });
+    if(polygonCount>0){
+      results.push({name,acres,hectares:acres*0.404686,polygonCount});
+    }
+  });
+  if(results.length===0) throw new Error('No Polygon boundaries were found.');
+  return results;
+}
+
+function parseKmlCoordinates(text){
+  return text.trim().split(/\s+/).map(pair=>{
+    const [lon,lat]=pair.split(',').map(Number);
+    return {lon,lat};
+  }).filter(p=>Number.isFinite(p.lon)&&Number.isFinite(p.lat));
+}
+
+function polygonAcres(points){
+  // Equirectangular projection around the polygon centroid, then shoelace area.
+  const earthRadiusM=6371008.8;
+  const lat0=points.reduce((sum,p)=>sum+p.lat,0)/points.length*Math.PI/180;
+  const projected=points.map(p=>({
+    x:earthRadiusM*(p.lon*Math.PI/180)*Math.cos(lat0),
+    y:earthRadiusM*(p.lat*Math.PI/180)
+  }));
+  let area=0;
+  for(let i=0,j=projected.length-1;i<projected.length;j=i++){
+    area+=(projected[j].x*projected[i].y)-(projected[i].x*projected[j].y);
+  }
+  return Math.abs(area/2)/4046.8564224;
+}
+
+function renderImportedFields(fileName){
+  const sel=document.getElementById('field-select');
+  const status=document.getElementById('kml-status');
+  const wrap=document.getElementById('field-table-wrap');
+  sel.innerHTML='<option value="">No KML field selected</option>';
+  if(!importedFields.length){
+    wrap.style.display='none';
+    wrap.innerHTML='';
+    if(status.textContent==='No KML uploaded.') status.innerHTML='<span class="status-warn">No fields found.</span>';
+    return;
+  }
+  importedFields.forEach((f,i)=>{
+    const opt=document.createElement('option');
+    opt.value=String(i);
+    opt.textContent=`${f.name} — ${f.acres.toFixed(2)} ac`;
+    sel.appendChild(opt);
+  });
+  const total=importedFields.reduce((sum,f)=>sum+f.acres,0);
+  status.innerHTML=`<span class="status-ok">Imported ${importedFields.length} field${importedFields.length===1?'':'s'} from ${escapeHtml(fileName)}.</span> Total boundary area: ${total.toFixed(2)} acres.`;
+  wrap.style.display='block';
+  wrap.innerHTML=`<table class="field-table"><thead><tr><th>Field</th><th>Acres</th><th>Hectares</th><th></th></tr></thead><tbody>${importedFields.map((f,i)=>`<tr><td>${escapeHtml(f.name)}</td><td>${f.acres.toFixed(2)}</td><td>${f.hectares.toFixed(2)}</td><td><button class="small-action" type="button" onclick="applyImportedField(${i})">Use</button></td></tr>`).join('')}</tbody></table>`;
+  if(importedFields.length===1){ sel.value='0'; applyImportedField(0); }
+}
+
+function selectImportedField(){
+  const v=document.getElementById('field-select').value;
+  if(v==='') return;
+  applyImportedField(Number(v));
+}
+
+function applyImportedField(i){
+  const f=importedFields[i];
+  if(!f) return;
+  document.getElementById('field-select').value=String(i);
+  document.getElementById('field-name').value=f.name;
+  document.getElementById('boundary-source').value='KML boundary';
+  document.getElementById('area-input').value=(unit==='si'?f.hectares:f.acres).toFixed(2);
+  compute();
+  postEmbedHeight();
+}
+
+function escapeHtml(str){
+  return String(str||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function collectReportData(){
+  const areaUnit=unit==='si'?'hectares':'acres';
+  const lossUnit=document.getElementById('res-unit').textContent;
+  const totalUnit=document.getElementById('total-unit').textContent;
+  const practices=selectedPracs.size>0?[...selectedPracs.values()].map(i=>`${i.code} ${i.n}`).join(', '):'None selected';
+  return {
+    title:'SCI Field Erosion Estimate',
+    date:new Date().toLocaleDateString(),
+    farm:getTextValue('farm-name','Not entered'),
+    producer:getTextValue('producer-name','Not entered'),
+    county:getTextValue('county-state','Not entered'),
+    tract:getTextValue('tract-number','Not entered'),
+    notes:getTextValue('report-notes',''),
+    field:getTextValue('field-name','Unnamed field'),
+    boundary:getTextValue('boundary-source','Manual entry'),
+    zip:getTextValue('zip','Not entered'),
+    rainfall:getTextValue('rain-in',''),
+    area:getTextValue('area-input',''),
+    areaUnit,
+    crop:selectedOptionText('crop-sel'),
+    tillage:selectedOptionText('till-sel'),
+    cover:selectedOptionText('cc-sel'),
+    texture:state.texName,
+    result:document.getElementById('res-num').textContent,
+    lossUnit,
+    total:document.getElementById('total-loss').textContent,
+    totalUnit,
+    verdict:document.getElementById('verdict').textContent.trim(),
+    factors:`R ${state.r} | K ${state.k.toFixed(2)} | LS ${state.ls.toFixed(2)} | C ${state.c.toFixed(3)} | P ${state.p.toFixed(3)}`,
+    practices
+  };
+}
+
+function downloadPdfReport(){
+  compute();
+  const d=collectReportData();
+  const lines=[
+    d.title,
+    `Date: ${d.date}`,
+    '',
+    'Farm details',
+    `Farm / business: ${d.farm}`,
+    `Producer / operator: ${d.producer}`,
+    `County / state: ${d.county}`,
+    `Tract / farm number: ${d.tract}`,
+    '',
+    'Field details',
+    `Field name: ${d.field}`,
+    `Boundary source: ${d.boundary}`,
+    `ZIP code: ${d.zip}`,
+    `Field size: ${d.area} ${d.areaUnit}`,
+    `Annual rainfall: ${d.rainfall} inches`,
+    `Soil texture: ${d.texture}`,
+    `Cash crop / land use: ${d.crop}`,
+    `Tillage: ${d.tillage}`,
+    `Cover crop: ${d.cover}`,
+    '',
+    'Results',
+    `Estimated annual soil loss: ${d.result} ${d.lossUnit}`,
+    `Total field soil loss: ${d.total} ${d.totalUnit}`,
+    `Status: ${d.verdict}`,
+    `Factors: ${d.factors}`,
+    '',
+    'Conservation practices',
+    d.practices,
+    '',
+    'Notes',
+    d.notes || 'None',
+    '',
+    'Method note: This is a simplified farmer-facing RUSLE-style estimate for planning and education. Use official NRCS/RUSLE2 planning tools for conservation compliance, engineering design, or program eligibility.'
+  ];
+  const pdf=makeSimplePdf(lines);
+  const blob=new Blob([pdf],{type:'application/pdf'});
+  const a=document.createElement('a');
+  const safe=(d.field||'field').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'field';
+  a.href=URL.createObjectURL(blob);
+  a.download=`sci-erosion-report-${safe}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+
+function makeSimplePdf(lines){
+  const objects=[];
+  const add=obj=>{objects.push(obj);return objects.length;};
+  const wrapped=[];
+  lines.forEach(line=>{
+    const chunks=wrapLine(String(line),88);
+    if(chunks.length) chunks.forEach(c=>wrapped.push(c));
+    else wrapped.push('');
+  });
+  const stream=[];
+  stream.push('BT');
+  stream.push('/F1 18 Tf 54 742 Td');
+  wrapped.forEach((line,idx)=>{
+    if(idx===1){stream.push('/F1 10 Tf 0 -20 Td');}
+    else if(idx>1){stream.push('0 -14 Td');}
+    if(['Farm details','Field details','Results','Conservation practices','Notes'].includes(line)){
+      stream.push('/F1 13 Tf');
+      stream.push(`(${pdfEscape(line)}) Tj`);
+      stream.push('/F1 10 Tf');
+    }else{
+      stream.push(`(${pdfEscape(line)}) Tj`);
+    }
+  });
+  stream.push('ET');
+  const content=stream.join('\n');
+  const fontId=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  const contentId=add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  const pageId=add(`<< /Type /Page /Parent 4 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+  const pagesId=add(`<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`);
+  const catalogId=add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+  let pdf='%PDF-1.4\n';
+  const offsets=[0];
+  objects.forEach((obj,i)=>{offsets[i+1]=pdf.length;pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;});
+  const xref=pdf.length;
+  pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+  for(let i=1;i<=objects.length;i++) pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+  pdf+=`trailer << /Size ${objects.length+1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return pdf;
+}
+function wrapLine(line,max){
+  if(!line) return [''];
+  const words=line.split(/\s+/); const out=[]; let cur='';
+  words.forEach(w=>{if((cur+' '+w).trim().length>max){out.push(cur);cur=w;}else{cur=(cur+' '+w).trim();}});
+  if(cur) out.push(cur);
+  return out;
+}
+function pdfEscape(str){
+  return String(str).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)').replace(/[\u2013\u2014]/g,'-').replace(/[\u2022]/g,'*').replace(/[^\x09\x0A\x0D\x20-\x7E]/g,'');
+}
+
+buildDropdowns();
+calcTexture();
+calcLS();
+rainChanged();
+document.getElementById('k-unit-lbl').textContent='ton·ac·hr / ac·hundreds ft·tonf·in';
+
+function sendPrompt(promptText){
+  const payload={type:'sci-rusle2-prompt',prompt:promptText};
+  try{ window.parent && window.parent.postMessage(payload,'*'); }catch(e){}
+  const q=encodeURIComponent(promptText);
+  const url='https://chat.openai.com/?q='+q;
+  window.open(url,'_blank','noopener,noreferrer');
+}
+
+function postEmbedHeight(){
+  try{
+    const h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);
+    window.parent && window.parent.postMessage({type:'sci-rusle2-resize',height:h},'*');
+  }catch(e){}
+}
+
+const resizeObserver=new ResizeObserver(postEmbedHeight);
+resizeObserver.observe(document.body);
+window.addEventListener('load',postEmbedHeight);
+window.addEventListener('resize',postEmbedHeight);
+
+</script>
+
+</body>
+</html>
